@@ -14,6 +14,9 @@ namespace SCExporter
         static void Main(string[] args)
         {
             // Loads user setting from config file
+            var teamstoryid = ConfigurationManager.AppSettings["teamstoryid"];
+            var portfolioid = ConfigurationManager.AppSettings["portfolioid"];
+            var templateid = ConfigurationManager.AppSettings["templateid"];
             var userid = ConfigurationManager.AppSettings["user"];
             var passwd = ConfigurationManager.AppSettings["pass"];
             var URL = ConfigurationManager.AppSettings["URL"];
@@ -56,11 +59,11 @@ namespace SCExporter
             var itemFile = "Name,Description,Category,Start";
             // Grabs the attributes of the story
             var attData = Story.Attributes;
-
+            var catData = Story.Categories;
             // Filters the default attributes from the story
             var attList = new List<SC.API.ComInterop.Models.Attribute>();
-            Regex regex = new Regex(@"none|None|Sample");     
-            foreach(var att in attData)
+            Regex regex = new Regex(@"none|None|Sample");
+            foreach (var att in attData)
             {
                 // Checks to see if attribute header is a default attritube.
                 Match match = regex.Match(att.Name);
@@ -74,25 +77,31 @@ namespace SCExporter
             // End of Initial Header line
             itemFile += "," + "Tags" + Environment.NewLine;
             // Goes through array of the story's item
-            foreach (var item in Story.Items)
+            foreach (var cat in catData)
             {
-                // Creates the initial line for the item 
-                var itemLine = '"' + item.Name + '"' + "," + '"' + item.Description + '"' + ","
-                  + item.Category.Name + "," + item.StartDate;
-                // Adds the attributes to the item
-                foreach (var att in attList)
+                foreach (var item in Story.Items)
                 {
-                    itemLine += "," + item.GetAttributeValueAsText(att);
+                    if (item.Category.Name == cat.Name)
+                    {
+                        // Creates the initial line for the item 
+                        var itemLine = '"' + item.Name + '"' + "," + '"' + item.Description + '"' + ","
+                          + item.Category.Name + "," + item.StartDate;
+                        // Adds the attributes to the item
+                        foreach (var att in attList)
+                        {
+                            itemLine += "," + item.GetAttributeValueAsText(att);
+                        }
+                        // Adds the tags to the item
+                        var tagLine = "";
+                        foreach (var tag in item.Tags)
+                        {
+                            tagLine += tag.Text;
+                        }
+                        itemLine += "," + tagLine + Environment.NewLine;
+                        // Adds the line to the file
+                        itemFile += itemLine;
+                    }
                 }
-                // Adds the tags to the item
-                var tagLine = "";
-                foreach(var tag in item.Tags)
-                {
-                    tagLine += tag.Text;
-                }
-                itemLine +=  "," + tagLine + Environment.NewLine;
-                // Adds the line to the file
-                itemFile += itemLine;
             }
             // Writes file to disk
             File.WriteAllText(System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString() + "\\itemFile.csv", itemFile);
