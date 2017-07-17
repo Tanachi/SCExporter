@@ -1,7 +1,7 @@
 # SCExporter
 Exports story data from Sharpcloud into 2 spreadsheets
 
-How to install
+# How to install
 
 Add References
 Project -> Add References
@@ -16,7 +16,7 @@ Tools -> Nuget Package Manager -> Package Manager Console
 Install-Package Newtonsoft.Json
 Install-Package SharpCloud.ClientAPI -Version 1.0.18
 
-Issues:
+# Issues:
 If the program crashes, a instance of excel will still be up. Must close in task manager.
 
 Excel Spreadsheet will break if item data contains commas in them.
