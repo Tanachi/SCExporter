@@ -159,7 +159,7 @@ namespace SCExporter
                             subLine = "null";
                         }
                         // adds the group of items to the line aswell as the color of the category
-                        itemLine += "," + resLine + "," + tagLine + "," + subLine + "," +
+                        itemLine += ","  + tagLine + "," + subLine + "," +
                             cat.Color.A + "|" + cat.Color.R + "|" + cat.Color.G + "|" + cat.Color.B + ",";
                         // downloads the image for each item
                         try
