@@ -7,19 +7,8 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Microsoft.Office.Interop.Excel;
 using System.Net;
+using System.Text;
 
-/* 
-Project -> Add References
-System.Configuration
-System.Drawing
-
-COM
-Microsoft Excel 16.0 Object Library
-
-Tools -> Nuget Package Manager -> Package Manager Console
-Install-Package Newtonsoft.Json
-Install-Package SharpCloud.ClientAPI -Version 1.0.18
-*/
 // Grabs story info from Sharpcloud and converts the data into a relationship sheet and item sheet.
 namespace SCExporter
 {
@@ -43,49 +32,66 @@ namespace SCExporter
             // Login and get story data from Sharpcloud
             var sc = new SharpCloudApi(userid, passwd, URL);
             var story = sc.LoadStory(storyID);
-            var catArray = story.Categories;
-            using (WebClient client = new WebClient())
-            {
-                client.DownloadFile(story.ImageUri, (fileLocation +
-                    "\\" + "Files" + "\\" + "story_Back.jpg"));
-            }
-            // Sort data into 2 different spreadsheets and writes them to disk.
-            RelationshipSheet(story);
-            ItemSheet(story);
+            
+            //Create excel application and create a workbook with 2 spreadsheets
+            var excel = new Application();
+            excel.DisplayAlerts = false;
+            Workbook storyWb = excel.Workbooks.Add(1);
+            Worksheet itemSheet = (Worksheet)storyWb.Sheets[1];
+            var newSheet = storyWb.Worksheets.Add(Type.Missing, storyWb.Worksheets[storyWb.Worksheets.Count], 1, XlSheetType.xlWorksheet) as Worksheet;
+            newSheet.Name = "relationShipSheet";
+
+            // Insert data into 2 spreadsheets
+            ItemSheet(story, itemSheet);
+            RelationshipSheet(story, newSheet);
+
+            // Convert the 2 csv files into a xlsx file
             string[] paths = new string[2] {fileLocation + "\\itemFile.csv" ,
                 fileLocation + "\\relationshipFile.csv"};
-
             MergeWorkbooks(fileLocation + "\\combine.xlsx", paths);
+
+            storyWb.Close();
+            excel.Quit();
         }
         // Grabs all relationship data between 2 items.
-        private static void RelationshipSheet(Story Story)
+        private static void RelationshipSheet(Story Story, Worksheet relationshipSheet)
         {
-            // Header line for relationship sheet.
-            var relationshipFile = "Item 1,Item 2,Direction" + System.Environment.NewLine;
+            // file path variable
+            var fileLocation = System.IO.Directory.GetParent
+                (System.IO.Directory.GetParent(Environment.CurrentDirectory)
+                .ToString()).ToString();
 
-
+            // Header Line
+            relationshipSheet.Cells[1, "A"].Value2 = "Item 1";
+            relationshipSheet.Cells[1, "B"].Value2 = "Item 2";
+            relationshipSheet.Cells[1, "C"].Value2 = "Direction";
+            var count = 2;
+            
             // Parse through relationship data
             foreach (var line in Story.Relationships)
             {
-                var itemOne = line.Item1.Name;
-                var itemTwo = line.Item2.Name;
-                var direction = line.Direction;
-                var newLine = '"' + itemOne + '"' + "," + '"' + itemTwo + '"' + ","
-                    + direction + System.Environment.NewLine;
-                relationshipFile = relationshipFile + newLine;
+                relationshipSheet.Cells[count, "A"] = line.Item1.Name;
+                relationshipSheet.Cells[count, "B"] = line.Item2.Name;
+                relationshipSheet.Cells[count, "C"] = line.Direction.ToString();
+                count++;
             }
             //Write data to file
-            File.WriteAllText(System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory)
-                .ToString()).ToString() + "\\relationshipFile.csv", relationshipFile);
-            Console.WriteLine("RelationshipFile written");
+            relationshipSheet.SaveAs(fileLocation + "\\relationshipFile.csv", XlFileFormat.xlCSVWindows);
+            Console.WriteLine("Relationship file written");
+
         }
+       
         //Grabs all item data with their attributes.
-        private static void ItemSheet(Story Story)
+        private static void ItemSheet(Story Story, Worksheet itemSheet)
         {
-            // Initial Header File
-            var itemFile = "Name,Description,Category,Start";
+            // file location for output
+            var fileLocation = System.IO.Directory.GetParent
+                (System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
+            // Initial Header list
+            var headList = new List<string> { "Name","Description","Category","Start","Resources","Tags","Panels","Subcategory","AttCount","cat_color","file_path" };
             // Grabs the attributes of the story
             var attData = Story.Attributes;
+            // Grabs the categories of the story
             var catData = Story.Categories;
             // Filters the default attributes from the story
             var attList = new List<SC.API.ComInterop.Models.Attribute>();
@@ -100,102 +106,166 @@ namespace SCExporter
                     // Adds non-default attribute to the List and to the header line
                     attList.Add(att);
                     attCount++;
-                    itemFile += "," + att.Name;
+                    headList.Add(att.Name.ToString());
                 }
             }
-            // Adds the rest of the item line
-            itemFile += "," + "Resources" + "," +
-                "Tags" + "," + "Subcategory" + "," + "AttCount" + "," + "cat_color" + "," + 
-                "file_path" + Environment.NewLine;
-            // Goes through array of the story's item
-            // goes through items based on category order
+            //Inserts headlist to first row of the sheet
+            string[] header = headList.ToArray();
+            char l = (char)((65) + (header.Length - 1));
+            char n = 'o';
+            // If column length is greater than 26, Add a "A" before every letter
+            if(header.Length > 26)
+            {
+                n = (char)((65) + (header.Length - 26 - 1));
+            }
+            if(header.Length > 26)
+            {
+                itemSheet.Range[itemSheet.Cells[1, "A"], itemSheet.Cells[1, l.ToString() + n.ToString()]].Value2 = header;
+            }
+            else
+            {
+                itemSheet.Range[itemSheet.Cells[1, "A"], itemSheet.Cells[1, l.ToString()]].Value2 = header;
+            }
+            var itemCount = 2;
+            // Goes through items in category order
             foreach(var cat in catData)
             {
+                
                 foreach (var item in Story.Items)
                 {
                     // check to see if category matches item category
                     if(item.Category.Name == cat.Name)
                     {
-                        // file location for output
-                        var fileLocation = System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
-                        // Creates the initial line for the item 
-                        var itemLine = '"' + item.Name + '"' + "," + '"' + item.Description + '"' + ","
-                          + item.Category.Name + "," + item.StartDate;
-                        // Adds the attributes to the item
-                        foreach (var att in attList)
-                        {
-                            itemLine += "," + item.GetAttributeValueAsText(att);
-                        }
-                        // Adds the tags to the item
-                        var tagLine = "";
-                        foreach (var tag in item.Tags)
-                        {
-                            tagLine += tag.Text + "|"; 
-                        }
-     
-                        // adds the resources to the line
+                        // Creates the initial list for the item 
+                        var itemList = new List<string> {item.Name, item.Description, item.Category.Name,item.StartDate.ToString()};
+
+                        //Goes through the item's resources
                         var resLine = "";
-                        foreach (var res in item.Resources)
+                        if(item.Resources.Length > 0)
                         {
-                            resLine += res.Name + "~" + res.Url + "|";
+                            foreach (var res in item.Resources)
+                            {
+                                //downloads resource file if there is a file extension to file
+                                if (res.FileExtension != null)
+                                {
+                                    res.DownloadFile(fileLocation + "\\Files\\" + res.Name + res.FileExtension);
+                                    resLine += res.Name + "~" + res.Name + "*" + res.FileExtension + "|";
+                                }
+                                // Gets the url for a website
+                                else
+                                {
+                                    resLine += res.Name + "~" + res.Url + "|";
+                                }
+
+                            }
                         }
-                        resLine.ToString();
-                        // adds the panels to the line
-                        var panLine = "";
-                        foreach ( var pan in item.Panels)
+                        // Item has no resources
+                        else
                         {
-                            panLine += pan.Title + "|";
+                            resLine = "null";
+                        }
+                        // Add the resource data to list
+                        itemList.Add(resLine);
+                        // Adds the tags to the list
+                        var tagLine = "";
+                        if(item.Tags.Length > 0)
+                        {
+                            foreach (var tag in item.Tags)
+                            {
+                                tagLine += tag.Text + "|";
+                            }
+                        }
+                        else
+                        {
+                            tagLine = "null";
                         }
                         
+                        itemList.Add(tagLine);
+                        // Adds the panels to the list
+                        var panLine = "";
+                        // Check to see if item has any panels containing data
+                        var dataCount = 0;
+                        foreach (var pan in item.Panels)
+                        {
+                            // Check to see if panel data is empty
+                            if(pan.Data.ToString() != "_EMPTY_")
+                            {
+                                dataCount++;
+                                panLine += pan.Title + "@" + pan.Type + "@" + pan.Data + "|";
+                            }
+                            
+                        }
+                        if(dataCount == 0)
+                        {
+                            panLine = "null";
+                        }
+                        itemList.Add(panLine);
                         // adds the sub category to the item
                         var subLine = "";
                         // checks to see if item has a subcategory
                         try
-                        { 
+                        {
                             subLine = item.SubCategory.Name;
                         }
                         catch
                         {
                             subLine = "null";
                         }
-                        // adds the group of items to the line aswell as the color of the category
-                        itemLine += ","  + tagLine + "," + subLine + "," +
-                            cat.Color.A + "|" + cat.Color.R + "|" + cat.Color.G + "|" + cat.Color.B + ",";
-                        // downloads the image for each item
-                        try
+                        itemList.Add(subLine);
+                        itemList.Add(attCount.ToString());
+                        //Adds the color of the category to the list
+                        var colors = (cat.Color.A + "|" + cat.Color.R + "|" + cat.Color.G + "|" + cat.Color.B).ToString();
+                        itemList.Add(colors);
+                        // check to see if item has a image based off the sharpcloud image url
+                        Regex zeroImage = new Regex(@"00000000");
+                        Match zeroMatch = zeroImage.Match(item.ImageUri.ToString());
+                        if (zeroMatch.Success)
+                        {
+                            itemList.Add("null");
+                        }
+                        // Downloads image to folder if url is not all 0s
+                        else
                         {
                             using (WebClient client = new WebClient())
                             {
-                                client.DownloadFile(item.ImageUri, (fileLocation + 
+                                client.DownloadFile(item.ImageUri, (fileLocation +
                                     "\\" + "Files" + "\\" + item.Name + ".jpg"));
-                                itemLine += fileLocation +
-                                    "\\" + "Files" + "\\" + item.Name + ".jpg";
+                                itemList.Add(fileLocation + "\\" + "Files" + "\\");
                             }
-                        } 
-                        catch (Exception)
-                        {
-                            itemLine += "null";
                         }
-                        
-                        itemLine += System.Environment.NewLine;
-                        // Adds the line to the file
-                        itemFile += itemLine;
+                        // Adds the attributes to the item
+                        foreach (var att in attList)
+                        {
+                            itemList.Add(item.GetAttributeValueAsText(att));
+                        }
+                        // Adds entire list to the row for the item.
+                        string[] itemLine = itemList.ToArray();
+                        // If item column is greater than 26, Add a "A" before all letters
+                        if (header.Length > 26)
+                        {
+                            itemSheet.Range[itemSheet.Cells[itemCount, "A"], itemSheet.Cells[itemCount, l.ToString() + n.ToString()]].Value2 = itemLine;
+                        }
+                        else
+                        {
+                            itemSheet.Range[itemSheet.Cells[itemCount, "A"], itemSheet.Cells[itemCount, l.ToString()]].Value2 = itemLine;
+                        }
+                        itemCount++;
                     }
                     
                 }
             }
+            
             // Writes file to disk
-            File.WriteAllText(System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString() + "\\itemFile.csv", itemFile);
+            itemSheet.SaveAs(fileLocation + "\\itemFile.csv", XlFileFormat.xlCSVWindows);
             Console.WriteLine("ItemFile Written");
         }
 
         // method created by HuBeZa https://stackoverflow.com/a/32310557
         private static void MergeWorkbooks(string destinationFilePath, params string[] sourceFilePaths)
         {
-            var app = new Application();
-            app.DisplayAlerts = false; // No prompt when overriding
-
             // Create a new workbook (index=1) and open source workbooks (index=2,3,...)
+            var app = new Application();
+            app.DisplayAlerts = false;
             Workbook destinationWb = app.Workbooks.Add();
             foreach (var sourceFilePath in sourceFilePaths)
             {
@@ -227,7 +297,6 @@ namespace SCExporter
             // Save new workbook
             destinationWb.SaveAs(destinationFilePath);
             destinationWb.Close();
-
             app.Quit();
         }
     }
