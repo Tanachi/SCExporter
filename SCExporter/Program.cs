@@ -134,7 +134,7 @@ namespace SCExporter
                     // Adds non-default attribute to the List and to the header line
                     attList.Add(att);
                     attCount++;
-                    headList.Add(att.Name.ToString());
+                    headList.Add(att.Name + "|" + att.Type);
                 }
             }
             //Inserts headlist to first row of the sheet
@@ -264,9 +264,24 @@ namespace SCExporter
                         // Adds the attributes to the item
                         foreach (var att in attList)
                         {
-                            
-                            Console.WriteLine(att.Type);
-                            itemList.Add(item.GetAttributeValueAsText(att));
+                            switch (att.Type.ToString())
+                            {
+                                case "Text":
+                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    break;
+                                case "Numeric":
+                                    itemList.Add(item.GetAttributeValueAsDouble(att).ToString());
+                                    break;
+                                case "Date":
+                                    itemList.Add(item.GetAttributeValueAsDate(att).ToString());
+                                    break;
+                                case "List":
+                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    break;
+                                case "Location":
+                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    break;
+                            }
                         }
                         // Adds entire list to the row for the item.
                         string[] itemLine = itemList.ToArray();
