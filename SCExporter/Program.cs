@@ -8,13 +8,44 @@ using System.Text.RegularExpressions;
 using Microsoft.Office.Interop.Excel;
 using System.Net;
 using System.Text;
-
+using System.Threading;
 // Grabs story info from Sharpcloud and converts the data into a relationship sheet and item sheet.
 namespace SCExporter
 {
     class Program
     {
-        
+        class relationship
+        {
+            private string storyID;
+            Application app;
+            Worksheet relationshipSheet;
+            private static void RelationshipSheet(Story Story, Worksheet relationshipSheet)
+            {
+                // file path variable
+                var fileLocation = System.IO.Directory.GetParent
+                    (System.IO.Directory.GetParent(Environment.CurrentDirectory)
+                    .ToString()).ToString();
+
+                // Header Line
+                relationshipSheet.Cells[1, "A"].Value2 = "Item 1";
+                relationshipSheet.Cells[1, "B"].Value2 = "Item 2";
+                relationshipSheet.Cells[1, "C"].Value2 = "Direction";
+                var count = 2;
+
+                // Parse through relationship data
+                foreach (var line in Story.Relationships)
+                {
+                    relationshipSheet.Cells[count, "A"] = line.Item1.Name;
+                    relationshipSheet.Cells[count, "B"] = line.Item2.Name;
+                    relationshipSheet.Cells[count, "C"] = line.Direction.ToString();
+                    count++;
+                }
+                //Write data to file
+                relationshipSheet.SaveAs(fileLocation + "\\relationshipFile.csv", XlFileFormat.xlCSVWindows);
+                Console.WriteLine("Relationship file written");
+          
+            }
+        }
         static void Main(string[] args)
         {
             var fileLocation = System.IO.Directory.GetParent
@@ -32,18 +63,16 @@ namespace SCExporter
             // Login and get story data from Sharpcloud
             var sc = new SharpCloudApi(userid, passwd, URL);
             var story = sc.LoadStory(storyID);
-            
             //Create excel application and create a workbook with 2 spreadsheets
             var excel = new Application();
             excel.DisplayAlerts = false;
             Workbook storyWb = excel.Workbooks.Add(1);
             Worksheet itemSheet = (Worksheet)storyWb.Sheets[1];
-            var newSheet = storyWb.Worksheets.Add(Type.Missing, storyWb.Worksheets[storyWb.Worksheets.Count], 1, XlSheetType.xlWorksheet) as Worksheet;
-            newSheet.Name = "relationShipSheet";
-
+            var relationshipSheet = storyWb.Worksheets.Add(Type.Missing, storyWb.Worksheets[storyWb.Worksheets.Count], 1, XlSheetType.xlWorksheet) as Worksheet;
+            relationshipSheet.Name = "relationShipSheet";
             // Insert data into 2 spreadsheets
+            RelationshipSheet(story, relationshipSheet);
             ItemSheet(story, itemSheet);
-            RelationshipSheet(story, newSheet);
 
             // Convert the 2 csv files into a xlsx file
             string[] paths = new string[2] {fileLocation + "\\itemFile.csv" ,
@@ -66,7 +95,7 @@ namespace SCExporter
             relationshipSheet.Cells[1, "B"].Value2 = "Item 2";
             relationshipSheet.Cells[1, "C"].Value2 = "Direction";
             var count = 2;
-            
+
             // Parse through relationship data
             foreach (var line in Story.Relationships)
             {
@@ -80,7 +109,6 @@ namespace SCExporter
             Console.WriteLine("Relationship file written");
 
         }
-       
         //Grabs all item data with their attributes.
         private static void ItemSheet(Story Story, Worksheet itemSheet)
         {
@@ -88,7 +116,7 @@ namespace SCExporter
             var fileLocation = System.IO.Directory.GetParent
                 (System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
             // Initial Header list
-            var headList = new List<string> { "Name","Description","Category","Start","Resources","Tags","Panels","Subcategory","AttCount","cat_color","file_path" };
+            var headList = new List<string> { "Name","Description","Category","Start","Duration","Resources","Tags","Panels","Subcategory","AttCount","cat_color","file_path" };
             // Grabs the attributes of the story
             var attData = Story.Attributes;
             // Grabs the categories of the story
@@ -137,7 +165,7 @@ namespace SCExporter
                     if(item.Category.Name == cat.Name)
                     {
                         // Creates the initial list for the item 
-                        var itemList = new List<string> {item.Name, item.Description, item.Category.Name,item.StartDate.ToString()};
+                        var itemList = new List<string> {item.Name, item.Description, item.Category.Name,item.StartDate.ToString(), item.DurationInDays.ToString()};
 
                         //Goes through the item's resources
                         var resLine = "";
@@ -155,7 +183,7 @@ namespace SCExporter
                                 else
                                 {
                                     resLine += res.Name + "~" + res.Url + "|";
-                                }
+                                } 
 
                             }
                         }
@@ -236,6 +264,8 @@ namespace SCExporter
                         // Adds the attributes to the item
                         foreach (var att in attList)
                         {
+                            
+                            Console.WriteLine(att.Type);
                             itemList.Add(item.GetAttributeValueAsText(att));
                         }
                         // Adds entire list to the row for the item.
