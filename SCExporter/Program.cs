@@ -134,7 +134,7 @@ namespace SCExporter
                     // Adds non-default attribute to the List and to the header line
                     attList.Add(att);
                     attCount++;
-                    headList.Add(att.Name + "|" + att.Type);
+                    headList.Add(att.Name + "|" + att.Type + "|" + att.Description);
                 }
             }
             //Inserts headlist to first row of the sheet
