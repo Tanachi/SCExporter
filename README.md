@@ -9,6 +9,8 @@ Create a new C# console application.
 
 In the project folder, replace program.cs and app.config with the ones from this repo.
 
+Create a new folder with the name "Files" in the project folder.
+
 Add References
 
 Project -> Add References

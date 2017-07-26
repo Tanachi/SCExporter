@@ -6,6 +6,7 @@ using SC.API.ComInterop.Models;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Microsoft.Office.Interop.Excel;
+using System.Drawing;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -43,7 +44,7 @@ namespace SCExporter
                 //Write data to file
                 relationshipSheet.SaveAs(fileLocation + "\\relationshipFile.csv", XlFileFormat.xlCSVWindows);
                 Console.WriteLine("Relationship file written");
-          
+
             }
         }
         static void Main(string[] args)
@@ -54,7 +55,7 @@ namespace SCExporter
             // Loads user setting from config file
             var teamstoryid = ConfigurationManager.AppSettings["teamstoryid"];
             var portfolioid = ConfigurationManager.AppSettings["portfolioid"];
-            var templateid= ConfigurationManager.AppSettings["templateid"];
+            var templateid = ConfigurationManager.AppSettings["templateid"];
             var userid = ConfigurationManager.AppSettings["user"];
             var passwd = ConfigurationManager.AppSettings["pass"];
             var URL = ConfigurationManager.AppSettings["URL"];
@@ -116,7 +117,7 @@ namespace SCExporter
             var fileLocation = System.IO.Directory.GetParent
                 (System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
             // Initial Header list
-            var headList = new List<string> { "Name","Description","Category","Start","Duration","Resources","Tags","Panels","Subcategory","AttCount","cat_color","file_path" };
+            var headList = new List<string> { "Name", "Description", "Category", "Start", "Duration", "Resources", "Tags", "Panels", "Subcategory", "AttCount", "cat_color", "file_path" };
             // Grabs the attributes of the story
             var attData = Story.Attributes;
             // Grabs the categories of the story
@@ -125,7 +126,7 @@ namespace SCExporter
             var attList = new List<SC.API.ComInterop.Models.Attribute>();
             Regex regex = new Regex(@"none|None|Sample");
             var attCount = 0;
-            foreach(var att in attData)
+            foreach (var att in attData)
             {
                 // Checks to see if attribute header is a default attritube.
                 Match match = regex.Match(att.Name);
@@ -142,11 +143,11 @@ namespace SCExporter
             char l = (char)((65) + (header.Length - 1));
             char n = 'o';
             // If column length is greater than 26, Add a "A" before every letter
-            if(header.Length > 26)
+            if (header.Length > 26)
             {
                 n = (char)((65) + (header.Length - 26 - 1));
             }
-            if(header.Length > 26)
+            if (header.Length > 26)
             {
                 itemSheet.Range[itemSheet.Cells[1, "A"], itemSheet.Cells[1, l.ToString() + n.ToString()]].Value2 = header;
             }
@@ -156,20 +157,19 @@ namespace SCExporter
             }
             var itemCount = 2;
             // Goes through items in category order
-            foreach(var cat in catData)
+            foreach (var cat in catData)
             {
-                
                 foreach (var item in Story.Items)
                 {
                     // check to see if category matches item category
-                    if(item.Category.Name == cat.Name)
+                    if (item.Category.Name == cat.Name)
                     {
                         // Creates the initial list for the item 
-                        var itemList = new List<string> {item.Name, item.Description, item.Category.Name,item.StartDate.ToString(), item.DurationInDays.ToString()};
+                        var itemList = new List<string> { item.Name, item.Description, item.Category.Name, item.StartDate.ToString(), item.DurationInDays.ToString() };
 
                         //Goes through the item's resources
                         var resLine = "";
-                        if(item.Resources.Length > 0)
+                        if (item.Resources.Length > 0)
                         {
                             foreach (var res in item.Resources)
                             {
@@ -183,7 +183,7 @@ namespace SCExporter
                                 else
                                 {
                                     resLine += res.Name + "~" + res.Url + "|";
-                                } 
+                                }
 
                             }
                         }
@@ -196,7 +196,7 @@ namespace SCExporter
                         itemList.Add(resLine);
                         // Adds the tags to the list
                         var tagLine = "";
-                        if(item.Tags.Length > 0)
+                        if (item.Tags.Length > 0)
                         {
                             foreach (var tag in item.Tags)
                             {
@@ -207,7 +207,7 @@ namespace SCExporter
                         {
                             tagLine = "null";
                         }
-                        
+
                         itemList.Add(tagLine);
                         // Adds the panels to the list
                         var panLine = "";
@@ -216,14 +216,14 @@ namespace SCExporter
                         foreach (var pan in item.Panels)
                         {
                             // Check to see if panel data is empty
-                            if(pan.Data.ToString() != "_EMPTY_")
+                            if (pan.Data.ToString() != "_EMPTY_")
                             {
                                 dataCount++;
                                 panLine += pan.Title + "@" + pan.Type + "@" + pan.Data + "|";
                             }
-                            
+
                         }
-                        if(dataCount == 0)
+                        if (dataCount == 0)
                         {
                             panLine = "null";
                         }
@@ -231,11 +231,14 @@ namespace SCExporter
                         // adds the sub category to the item
                         var subLine = "";
                         // checks to see if item has a subcategory
-                        try
+                        if (item.Category.SubCategories != null)
                         {
-                            subLine = item.SubCategory.Name;
+                            foreach (var sub in item.Category.SubCategories)
+                            {
+                                subLine = sub.Name + "|";
+                            }
                         }
-                        catch
+                        else
                         {
                             subLine = "null";
                         }
@@ -296,10 +299,10 @@ namespace SCExporter
                         }
                         itemCount++;
                     }
-                    
+
                 }
             }
-            
+
             // Writes file to disk
             itemSheet.SaveAs(fileLocation + "\\itemFile.csv", XlFileFormat.xlCSVWindows);
             Console.WriteLine("ItemFile Written");
