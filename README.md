@@ -20,7 +20,8 @@ System.Drawing
 Install Packages
 
 Tools -> Nuget Package Manager -> Package Manager Console 
-Enter these in lines in the console in this order.
+
+Enter these lines in the console in this order.
 
 Install-Package Newtonsoft.Json
 
