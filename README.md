@@ -31,7 +31,12 @@ Install-Package Microsoft.Office.Interop.Excel -Version 15.0.4795.1000
 
 If there are still errors in the program, try restart Visual Studio.
 
-Enter your Sharpcloud username, password, and story id in the app.config file.
+Example sharpcloud Url
+
+https://my.sharpcloud.com/html/#/story/Copy this Area/view/
+
+Enter your Sharpcloud username, password, and story-id in the app.config file.
+
 ### Issues: 
 If the program crashes, a instance of excel will still be up. Must close in task manager.
 
