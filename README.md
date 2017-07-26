@@ -12,7 +12,9 @@ In the project folder, replace program.cs and app.config with the ones from this
 Add References
 
 Project -> Add References
+
 System.Configuration
+
 System.Drawing
 
 Install Packages
@@ -21,7 +23,9 @@ Tools -> Nuget Package Manager -> Package Manager Console
 Enter these in lines in the console in this order.
 
 Install-Package Newtonsoft.Json
+
 Install-Package SharpCloud.ClientAPI -Version 1.0.18
+
 Install-Package Microsoft.Office.Interop.Excel -Version 15.0.4795.1000
 
 If there are still errors in the program, try restart Visual Studio.
