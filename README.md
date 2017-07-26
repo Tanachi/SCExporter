@@ -9,13 +9,13 @@ Create a new C# console application.
 
 In the project folder, replace program.cs and app.config with the ones from this repo.
 
-#Add References
+Add References
 
 Project -> Add References
 System.Configuration
 System.Drawing
 
-#Install Packages
+Install Packages
 
 Tools -> Nuget Package Manager -> Package Manager Console 
 Enter these in lines in the console in this order.
