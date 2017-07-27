@@ -29,19 +29,17 @@ Install-Package Newtonsoft.Json
 
 Install-Package SharpCloud.ClientAPI
 
-Install-Package Microsoft.Office.Interop.Excel
+Install-Package EPPlus
 
 If there are still errors in the program, try restart Visual Studio.
 
 Example sharpcloud Url
 
-https://my.sharpcloud.com/html/#/story/Copy this Area/view/
+https://my.sharpcloud.com/html/#/story/CopythisArea/view/
 
 Enter your Sharpcloud username, password, and story-id in the app.config file.
 
 ### Issues: 
-If the program crashes, a instance of excel will still be up. Must close in task manager.
-
 Downloads all images and references from the story. Might take some time to finish.
 
 Program Crashes if you have any of the spreadsheets created from this program open during runtime.
