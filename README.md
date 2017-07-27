@@ -27,9 +27,9 @@ Enter these lines in the console in this order.
 
 Install-Package Newtonsoft.Json
 
-Install-Package SharpCloud.ClientAPI -Version 1.0.18
+Install-Package SharpCloud.ClientAPI
 
-Install-Package Microsoft.Office.Interop.Excel -Version 15.0.4795.1000
+Install-Package Microsoft.Office.Interop.Excel
 
 If there are still errors in the program, try restart Visual Studio.
 
