@@ -161,6 +161,7 @@ namespace SCExporter
             {
                 foreach (var item in Story.Items)
                 {
+                    var hasFile = false;
                     // check to see if category matches item category
                     if (item.Category.Name == cat.Name)
                     {
@@ -178,6 +179,7 @@ namespace SCExporter
                                 {
                                     res.DownloadFile(fileLocation + "\\Files\\" + res.Name + res.FileExtension);
                                     resLine += res.Name + "~" + res.Name + "*" + res.FileExtension + "|";
+                                    hasFile = true;
                                 }
                                 // Gets the url for a website
                                 else
@@ -247,12 +249,8 @@ namespace SCExporter
                         // check to see if item has a image based off the sharpcloud image url
                         Regex zeroImage = new Regex(@"00000000");
                         Match zeroMatch = zeroImage.Match(item.ImageUri.ToString());
-                        if (zeroMatch.Success)
-                        {
-                            itemList.Add("null");
-                        }
-                        // Downloads image to folder if url is not all 0s
-                        else
+                         // Downloads image to folder if url is not all 0s
+                        if (!zeroMatch.Success)
                         {
                             using (WebClient client = new WebClient())
                             {
@@ -260,6 +258,15 @@ namespace SCExporter
                                     "\\" + "Files" + "\\" + item.Name + ".jpg"));
                                 itemList.Add(fileLocation + "\\" + "Files" + "\\");
                             }
+                            hasFile = true;
+                        }
+                        if(hasFile == true)
+                        {
+                            itemList.Add(fileLocation + "\\" + "Files" + "\\");
+                        }
+                        else
+                        {
+                            itemList.add("null");   
                         }
                         // Adds the attributes to the item
                         foreach (var att in attList)
@@ -283,6 +290,7 @@ namespace SCExporter
                                     break;
                             }
                         }
+                        
                         // Adds entire list to the row for the item.
                         string[] itemLine = itemList.ToArray();
                         // If item column is greater than 26, Add a "A" before all letters
