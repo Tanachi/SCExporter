@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Configuration;
 using SC.API.ComInterop;
@@ -249,24 +249,23 @@ namespace SCExporter
                         // check to see if item has a image based off the sharpcloud image url
                         Regex zeroImage = new Regex(@"00000000");
                         Match zeroMatch = zeroImage.Match(item.ImageUri.ToString());
-                         // Downloads image to folder if url is not all 0s
+                        // Downloads image to folder if url is not all 0s
                         if (!zeroMatch.Success)
                         {
                             using (WebClient client = new WebClient())
                             {
                                 client.DownloadFile(item.ImageUri, (fileLocation +
                                     "\\" + "Files" + "\\" + item.Name + ".jpg"));
-                                itemList.Add(fileLocation + "\\" + "Files" + "\\");
                             }
                             hasFile = true;
                         }
-                        if(hasFile == true)
+                        if (hasFile)
                         {
                             itemList.Add(fileLocation + "\\" + "Files" + "\\");
                         }
                         else
                         {
-                            itemList.add("null");   
+                            itemList.Add("null");
                         }
                         // Adds the attributes to the item
                         foreach (var att in attList)
@@ -290,7 +289,7 @@ namespace SCExporter
                                     break;
                             }
                         }
-                        
+
                         // Adds entire list to the row for the item.
                         string[] itemLine = itemList.ToArray();
                         // If item column is greater than 26, Add a "A" before all letters
