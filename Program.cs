@@ -231,14 +231,11 @@ namespace SCExporter
                         // adds the sub category to the item
                         var subLine = "";
                         // checks to see if item has a subcategory
-                        if (item.Category.SubCategories != null)
+                        try
                         {
-                            foreach (var sub in item.Category.SubCategories)
-                            {
-                                subLine = sub.Name + "|";
-                            }
+                            subLine = item.SubCategory.Name;
                         }
-                        else
+                        catch
                         {
                             subLine = "null";
                         }
