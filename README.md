@@ -5,11 +5,11 @@ Creates folder of story and downloads all images and files to the location of pr
 
 ### How to install from Visual Studio
 
-Create a new C# console application.
+Create a new C# console application with the name SCExporter.
 
 In the project folder, replace program.cs and app.config with the ones from this repo.
 
-Create a new folder with the name "Files" in the project folder.
+Create a new folder with the name "Files" in the project folder to contain all the story's images and resources.
 
 Add References
 
@@ -30,8 +30,6 @@ Install-Package Newtonsoft.Json
 Install-Package SharpCloud.ClientAPI
 
 Install-Package EPPlus
-
-If there are still errors in the program, try restart Visual Studio.
 
 Example sharpcloud Url
 
