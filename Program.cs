@@ -120,16 +120,34 @@ namespace SCExporter
             relationshipSheet.Cells["A1"].Value = "Item 1";
             relationshipSheet.Cells["B1"].Value = "Item 2";
             relationshipSheet.Cells["C1"].Value = "Direction";
+            relationshipSheet.Cells["D1"].Value = "Tags";
+            relationshipSheet.Cells["E1"].Value = "Comment";
+            var goAtt = 6;
+            foreach(var att in Story.RelationshipAttributes)
+            {
+                relationshipSheet.Cells[1, goAtt].Value = att.Name;
+                goAtt++;
+            }
             var count = 2;
             // Parse through relationship data
             foreach (var line in Story.Relationships)
             {
-                var go = 1;
-                relationshipSheet.Cells[count, go].Value = line.Item1.Name;
-                go++;
-                relationshipSheet.Cells[count, go].Value = line.Item2.Name;
-                go++;
-                relationshipSheet.Cells[count, go].Value = line.Direction.ToString();
+                relationshipSheet.Cells[count, 1].Value = line.Item1.Name;
+                relationshipSheet.Cells[count, 2].Value = line.Item2.Name;
+                relationshipSheet.Cells[count, 3].Value = line.Direction.ToString();
+                var tagLine = "";
+                foreach(var lineTag in line.Tags)
+                {
+                    tagLine += lineTag.Text;
+                }
+                relationshipSheet.Cells[count, 4].Value = tagLine;
+                relationshipSheet.Cells[count, 5].Value = line.Comment;
+                var go = 6;
+                foreach(var att in Story.RelationshipAttributes)
+                {
+                    relationshipSheet.Cells[count, go].Value = line.GetAttributeValueAsText(Story.RelationshipAttribute_FindByName(att.Name));
+                    go++;
+                }
                 count++;
             }
             //Write data to file
