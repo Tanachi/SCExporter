@@ -230,36 +230,45 @@ namespace SCExporter
                         {
                             itemList.Add("null");
                         }
+                        string[] itemLine = itemList.ToArray();
+                        var go = 1;
+                        foreach (var itemCell in itemLine)
+                        {
+                            itemSheet.Cells[itemCount, go].Value = itemCell;
+                            if (go == 5)
+                            {
+                                itemSheet.Cells[itemCount, go].Value = Double.Parse(itemCell);
+                                itemSheet.Cells[itemCount, go].Style.Numberformat.Format = "#";
+                            }
+                            if (go == 10)
+                            {
+                                itemSheet.Cells[itemCount, go].Value = Double.Parse(itemCell);
+                            }
+                                
+                            go++;
+                        }
                         // Adds the attributes to the item
                         foreach (var att in attList)
                         {
                             switch (att.Type.ToString())
                             {
                                 case "Text":
-                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    itemSheet.Cells[itemCount, go].Value = item.GetAttributeValueAsText(att);
                                     break;
                                 case "Numeric":
-                                    itemList.Add(item.GetAttributeValueAsDouble(att).ToString());
+                                    itemSheet.Cells[itemCount, go].Value = item.GetAttributeValueAsDouble(att);
+                                    itemSheet.Cells[itemCount, go].Style.Numberformat.Format = "0.00";
                                     break;
                                 case "Date":
-                                    itemList.Add(item.GetAttributeValueAsDate(att).ToString());
+                                    itemSheet.Cells[itemCount, go].Value = item.GetAttributeValueAsDate(att);
                                     break;
                                 case "List":
-                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    itemSheet.Cells[itemCount, go].Value = item.GetAttributeValueAsText(att);
                                     break;
                                 case "Location":
-                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    itemSheet.Cells[itemCount, go].Value = item.GetAttributeValueAsText(att);
                                     break;
                             }
-                        }
-
-                        // Adds entire list to the row for the item.
-                        string[] itemLine = itemList.ToArray();
-                        go = 1;
-                        foreach (var itemCell in itemLine)
-                        {
-
-                            itemSheet.Cells[itemCount, go].Value = itemCell;
                             go++;
                         }
                         itemCount++;
