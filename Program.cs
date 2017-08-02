@@ -5,10 +5,7 @@ using SC.API.ComInterop;
 using SC.API.ComInterop.Models;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Microsoft.Office.Interop.Excel;
-using System.Drawing;
 using System.Net;
-using System.Text;
 using System.Threading;
 using OfficeOpenXml;
 using System.Linq;
@@ -17,6 +14,19 @@ namespace SCExporter
 {
     class Program
     {
+        public class Sharp
+        {
+
+            public SharpCloudApi sc { get; set; }
+            public Story story { get; set; }
+            public ExcelWorksheet sheet { get; set; }
+            public int order { get; set; }
+            public int attCount { get; set; }
+            public List<SC.API.ComInterop.Models.Attribute> attList {get; set;}
+            public int sheetLine { get; set; }
+            
+        }
+        static Thread firstHalf,downloader;
         static void Main(string[] args)
         {
             var fileLocation = System.IO.Directory.GetParent
@@ -34,17 +44,15 @@ namespace SCExporter
             // Login and get story data from Sharpcloud
             var sc = new SharpCloudApi(userid, passwd, URL);
             var story = sc.LoadStory(storyID);
-            //Create excel application and create a workbook with 2 spreadsheets
+            //Create EPPlus and create a workbook with 2 spreadsheets
             FileInfo newFile = new FileInfo(fileLocation + "\\combine.xlsx");
-
             ExcelPackage pck = new ExcelPackage(newFile);
-            //Add the Content sheet
+            //Add the Content sheets
             var itemSheet = pck.Workbook.Worksheets.FirstOrDefault(x => x.Name == "Items");
             if (itemSheet == null)
             {
                 itemSheet = pck.Workbook.Worksheets.Add("Items");
             }
-
             var relationshipSheet = pck.Workbook.Worksheets.First();
             if (pck.Workbook.Worksheets.Count > 1)
                 relationshipSheet = pck.Workbook.Worksheets.ElementAt(1);
@@ -52,13 +60,59 @@ namespace SCExporter
             {
                 relationshipSheet = pck.Workbook.Worksheets.Add("RelationshipSheet");
             }
-            // Insert data into 2 spreadsheets
-            RelationshipSheet(story, relationshipSheet);
-            ItemSheet(story, itemSheet);
+            //Setting up the threads
+            object a, b;
+            Sharp first = new Sharp();
+            Sharp second = new Sharp();
+            first.sc = sc; first.story = story; first.sheet = itemSheet;
+            first.order = 0;
+            second.story = story;
+            second.order = 1;
+            a = first;
+            b = second;
+            // Initial Item Header list
+            var headList = new List<string> { "Name", "Description", "Category", "Start", "Duration",
+                "Resources", "Tags", "Panels", "Subcategory", "AttCount", "cat_color", "file_path" };
+            // Filters the default attributes from the story
+            var attData = story.Attributes;
+            var attList = new List<SC.API.ComInterop.Models.Attribute>();
+            Regex regex = new Regex(@"none|None|Sample");
+            var attCount = 0;
+            foreach (var att in attData)
+            {
+                // Checks to see if attribute header is a default attritube.
+                Match match = regex.Match(att.Name);
+                if (!match.Success)
+                {
+                    // Adds non-default attribute to the List and to the header line
+                    attList.Add(att);
+                    attCount++;
+                    headList.Add(att.Name + "|" + att.Type + "|" + att.Description);
+                }
+            }
+            var go = 1;
+            foreach (var head in headList)
+            {
+                itemSheet.Cells[1, go].Value = head;
+                go++;
+            }
+            first.attList = attList;
+            first.sheetLine = 2;
+            first.attCount = attCount;
 
+            // Insert data into 2 spreadsheets
+            firstHalf = new Thread(new ParameterizedThreadStart(downloadFiles));
+            downloader = new Thread(new ParameterizedThreadStart(downloadFiles));
+
+            firstHalf.Start(a);
+            downloader.Start(b);
+            ItemSheet(a);
+            RelationshipSheet(story, relationshipSheet);
+
+            // Save the workbook
             pck.SaveAs(newFile);
         }
-        // Grabs all relationship data between 2 items.
+        // Grabs all relationship data between 2 items
         private static void RelationshipSheet(Story Story, OfficeOpenXml.ExcelWorksheet relationshipSheet)
         {
             // file path variable
@@ -81,51 +135,27 @@ namespace SCExporter
             //Write data to file
             Console.WriteLine("Relationship sheet written");
         }
-        //Grabs all item data with their attributes.
-
-        
-        private static void ItemSheet(Story Story, OfficeOpenXml.ExcelWorksheet itemSheet)
+        //Grabs all item data with their attributes
+        private static void ItemSheet(object Sharp)
         {
-            // file location for output
+            
             var fileLocation = System.IO.Directory.GetParent
-                (System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
-            // Initial Header list
-            var headList = new List<string> { "Name", "Description", "Category", "Start", "Duration", "Resources", "Tags", "Panels", "Subcategory", "AttCount", "cat_color", "file_path" };
-            // Grabs the attributes of the story
-            var attData = Story.Attributes;
-            // Grabs the categories of the story
-            var catData = Story.Categories;
-            // Filters the default attributes from the story
-            var attList = new List<SC.API.ComInterop.Models.Attribute>();
-            Regex regex = new Regex(@"none|None|Sample");
-            var attCount = 0;
-            foreach (var att in attData)
-            {
-                // Checks to see if attribute header is a default attritube.
-                Match match = regex.Match(att.Name);
-                if (!match.Success)
-                {
-                    // Adds non-default attribute to the List and to the header line
-                    attList.Add(att);
-                    attCount++;
-                    headList.Add(att.Name + "|" + att.Type + "|" + att.Description);
-                }
-            }
-            var go = 1;
-            foreach (var head in headList)
-            {
-
-                itemSheet.Cells[1, go].Value = head;
-                go++;
-            }
-            //Inserts headlist to first row of the sheet
-            var itemCount = 2;
+                (System.IO.Directory.GetParent(Environment.CurrentDirectory)
+                .ToString()).ToString();
+            Sharp sharp = Sharp as Sharp;
+            var story = sharp.story;
+            var sc = sharp.sc;
+            var catData = story.Categories;
+            var attList = sharp.attList;
+            var attCount = sharp.attCount;
+            var itemSheet = sharp.sheet;
+            var order = sharp.order;
+            var sheetLine = sharp.sheetLine;
             // Goes through items in category order
             foreach (var cat in catData)
-            {
-                foreach (var item in Story.Items)
+            {      
+                foreach(var item in story.Items)
                 {
-                    var hasFile = false;
                     // check to see if category matches item category
                     if (item.Category.Name == cat.Name)
                     {
@@ -141,9 +171,7 @@ namespace SCExporter
                                 //downloads resource file if there is a file extension to file
                                 if (res.FileExtension != null)
                                 {
-                                    res.DownloadFile(fileLocation + "\\Files\\" + res.Name + res.FileExtension);
                                     resLine += res.Name + "~" + res.Name + "*" + res.FileExtension + "|";
-                                    hasFile = true;
                                 }
                                 // Gets the url for a website
                                 else
@@ -214,22 +242,7 @@ namespace SCExporter
                         Regex zeroImage = new Regex(@"00000000");
                         Match zeroMatch = zeroImage.Match(item.ImageUri.ToString());
                         // Downloads image to folder if url is not all 0s
-                        if (!zeroMatch.Success)
-                        {
-                            using (WebClient client = new WebClient())
-                            {
-                                client.DownloadFile(item.ImageUri, (fileLocation + "\\" + "Files" + "\\" + item.Name + ".jpg"));
-                            }
-                            hasFile = true;
-                        }
-                        if (hasFile)
-                        {
-                            itemList.Add(fileLocation + "\\" + "Files" + "\\");
-                        }
-                        else
-                        {
-                            itemList.Add("null");
-                        }
+                        itemList.Add(fileLocation + "\\" + "Files" + "\\");
                         // Adds the attributes to the item
                         foreach (var att in attList)
                         {
@@ -252,24 +265,65 @@ namespace SCExporter
                                     break;
                             }
                         }
-
                         // Adds entire list to the row for the item.
                         string[] itemLine = itemList.ToArray();
-                        go = 1;
-                        foreach (var itemCell in itemLine)
-                        {
-
-                            itemSheet.Cells[itemCount, go].Value = itemCell;
-                            go++;
-                        }
-                        itemCount++;
+                        var go = 1;
+                            foreach (var itemCell in itemLine)
+                            {
+                                itemSheet.Cells[sheetLine, go].Value = itemCell;
+                                go++;
+                            }
+                        sheetLine++;
                     }
-
                 }
             }
 
             // Writes file to disk
             Console.WriteLine("ItemSheet Written");
+        }
+        private static void downloadFiles(object Sharp)
+        {
+            var fileLocation = System.IO.Directory.GetParent
+                (System.IO.Directory.GetParent(Environment.CurrentDirectory)
+                .ToString()).ToString();
+            Sharp sharp = Sharp as Sharp;
+            var story = sharp.story;
+            int order = sharp.order;
+            var a = 0;
+            var b = (story.Items.Length / 2) - 1;
+            if(order > 0)
+            {
+                a = story.Items.Length / 2;
+                b = story.Items.Length;
+            }
+            for (var i = a; i < b;i++)
+            {
+                //Goes through the item's resources
+                if (story.Items[i].Resources.Length > 0)
+                {
+                    foreach (var res in story.Items[i].Resources)
+                    {
+                        //downloads resource file if there is a file extension to file
+                        if (res.FileExtension != null)
+                        {
+                            res.DownloadFile(fileLocation + "\\Files\\" + res.Name + res.FileExtension);
+                        }
+                    }
+                }
+                // check to see if item has a image based off the sharpcloud image url
+                Regex zeroImage = new Regex(@"00000000");
+                Match zeroMatch = zeroImage.Match(story.Items[i].ImageUri.ToString());
+                // Downloads image to folder if url is not all 0s
+                if (!zeroMatch.Success)
+                {
+
+                    using (WebClient client = new WebClient())
+                    {
+                        client.DownloadFile(story.Items[i].ImageUri, (fileLocation + "\\" + "Files" + "\\" + story.Items[i].Name + ".jpg"));
+                    }
+                }
+            }
+            Console.WriteLine("Files Downloaded");
         }
         
     }
