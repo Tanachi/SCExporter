@@ -244,35 +244,47 @@ namespace SCExporter
                         // Downloads image to folder if url is not all 0s
                         itemList.Add(fileLocation + "\\" + "Files" + "\\");
                         // Adds the attributes to the item
+                        string[] itemLine = itemList.ToArray();
+                        var go = 1;
+                        foreach (var itemCell in itemLine)
+                        {
+                            itemSheet.Cells[sheetLine, go].Value = itemCell;
+                            if (go == 5)
+                            {
+                                itemSheet.Cells[sheetLine, go].Value = Double.Parse(itemCell);
+                                itemSheet.Cells[sheetLine, go].Style.Numberformat.Format = "#";
+                            }
+                            if (go == 10)
+                            {
+                                itemSheet.Cells[sheetLine, go].Value = Double.Parse(itemCell);
+                            }
+                                
+                            go++;
+                        }
+                        // Adds the attributes to the item
                         foreach (var att in attList)
                         {
                             switch (att.Type.ToString())
                             {
                                 case "Text":
-                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsText(att);
                                     break;
                                 case "Numeric":
-                                    itemList.Add(item.GetAttributeValueAsDouble(att).ToString());
+                                    itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsDouble(att);
+                                    itemSheet.Cells[sheetLine, go].Style.Numberformat.Format = "0.00";
                                     break;
                                 case "Date":
-                                    itemList.Add(item.GetAttributeValueAsDate(att).ToString());
+                                    itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsDate(att);
                                     break;
                                 case "List":
-                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsText(att);
                                     break;
                                 case "Location":
-                                    itemList.Add(item.GetAttributeValueAsText(att));
+                                    itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsText(att);
                                     break;
                             }
+                            go++;
                         }
-                        // Adds entire list to the row for the item.
-                        string[] itemLine = itemList.ToArray();
-                        var go = 1;
-                            foreach (var itemCell in itemLine)
-                            {
-                                itemSheet.Cells[sheetLine, go].Value = itemCell;
-                                go++;
-                            }
                         sheetLine++;
                     }
                 }
