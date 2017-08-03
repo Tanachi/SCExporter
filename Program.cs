@@ -40,10 +40,21 @@ namespace SCExporter
             var passwd = ConfigurationManager.AppSettings["pass"];
             var URL = ConfigurationManager.AppSettings["URL"];
             var storyID = ConfigurationManager.AppSettings["story"];
-
+            MatchCollection matchUrl = Regex.Matches(storyID, @"story\/(.+)\/view");
+            string[] matchGroup = null;
+            string storyUrl = "";
+            if(matchUrl.Count > 0)
+            {
+                matchGroup = matchUrl[0].ToString().Split('/');
+                storyUrl = matchGroup[1 ];
+            }
+            else
+            {
+                storyUrl = storyID;
+            }
             // Login and get story data from Sharpcloud
             var sc = new SharpCloudApi(userid, passwd, URL);
-            var story = sc.LoadStory(storyID);
+            var story = sc.LoadStory(storyUrl);
             //Create EPPlus and create a workbook with 2 spreadsheets
             FileInfo newFile = new FileInfo(fileLocation + "\\combine.xlsx");
             ExcelPackage pck = new ExcelPackage(newFile);
@@ -108,9 +119,14 @@ namespace SCExporter
             downloader.Start(b);
             ItemSheet(a);
             RelationshipSheet(story, relationshipSheet);
-
-            // Save the workbook
             pck.SaveAs(newFile);
+            /*
+            Console.WriteLine("Resource Tags");
+            foreach (var resTag in story.ResourceTags)
+            {
+                Console.WriteLine(resTag.Name);
+            }
+            */
         }
         // Grabs all relationship data between 2 items
         private static void RelationshipSheet(Story Story, OfficeOpenXml.ExcelWorksheet relationshipSheet)
@@ -125,7 +141,7 @@ namespace SCExporter
             var goAtt = 6;
             foreach(var att in Story.RelationshipAttributes)
             {
-                relationshipSheet.Cells[1, goAtt].Value = att.Name;
+                relationshipSheet.Cells[1, goAtt].Value = att.Name + "|" + att.Type;
                 goAtt++;
             }
             var count = 2;
@@ -138,7 +154,7 @@ namespace SCExporter
                 var tagLine = "";
                 foreach(var lineTag in line.Tags)
                 {
-                    tagLine += lineTag.Text;
+                    tagLine += lineTag.Text + "|";
                 }
                 relationshipSheet.Cells[count, 4].Value = tagLine;
                 relationshipSheet.Cells[count, 5].Value = line.Comment;
@@ -261,7 +277,6 @@ namespace SCExporter
                         Match zeroMatch = zeroImage.Match(item.ImageUri.ToString());
                         // Downloads image to folder if url is not all 0s
                         itemList.Add(fileLocation + "\\" + "Files" + "\\");
-                        // Adds the attributes to the item
                         string[] itemLine = itemList.ToArray();
                         var go = 1;
                         foreach (var itemCell in itemLine)
@@ -293,6 +308,7 @@ namespace SCExporter
                                     break;
                                 case "Date":
                                     itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsDate(att);
+                                    itemSheet.Cells[sheetLine, go].Style.Numberformat.Format = "mm/dd/yyyy hh:mm:ss AM/PM";
                                     break;
                                 case "List":
                                     itemSheet.Cells[sheetLine, go].Value = item.GetAttributeValueAsText(att);
@@ -303,6 +319,8 @@ namespace SCExporter
                             }
                             go++;
                         }
+                        // Adds entire list to the row for the item.
+                        
                         sheetLine++;
                     }
                 }
